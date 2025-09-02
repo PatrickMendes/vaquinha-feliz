@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vaquinha Feliz</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e7f4e4;
+      text-align: center;
+    }
+
+    .screen {
+      display: none;
+      padding: 30px;
+    }
+
+    .active {
+      display: block;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background-color: #fff8e1;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #4e6e4e;
+    }
+
+    .status p {
+      font-size: 18px;
+      margin: 5px 0;
+    }
+
+    .cow img {
+      width: 160px;
+      margin: 15px 0;
+    }
+
+    .buttons button, .menu button {
+      background-color: #a8d5ba;
+      color: #2f4f2f;
+      font-size: 16px;
+      margin: 5px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .buttons button:hover, .menu button:hover {
+      background-color: #91cba6;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        margin-top: 10px;
+      }
+
+      .cow img {
+        width: 100px;
+      }
+
+      .buttons button {
+        width: 100%;
+        margin: 8px 0;
+        font-size: 18px;
+      }
+
+      .status p {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- TELA INICIAL -->
+  <div class="screen active" id="startScreen">
+    <div class="container">
+      <h1>🐄 Vaquinha Feliz</h1>
+      <p>Cuide bem da sua vaquinha! Alimente, conforte e ordenhe leite.</p>
+      <button onclick="startGame()">🎮 Jogar</button>
+    </div>
+  </div>
+
+  <!-- JOGO -->
+  <div class="screen" id="gameScreen">
+    <div class="container">
+      <h1>🐄 Vaquinha Feliz</h1>
+
+      <div class="status">
+        <p>🥩 Fome: <span id="hunger">100</span></p>
+        <p>🧸 Conforto: <span id="comfort">100</span></p>
+        <p>❤️ Saúde: <span id="health">100</span></p>
+        <p>🥛 Leite: <span id="milk">0</span></p>
+      </div>
+
+      <div class="cow">
+        <img id="cowImage" src="https://i.imgur.com/ZYuKo0P.png" alt="Vaquinha" />
+      </div>
+
+      <div class="buttons">
+        <button onclick="feedCow()">🍽️ Alimentar</button>
+        <button onclick="comfortCow()">💆 Confortar</button>
+        <button onclick="milkCow()">🥛 Ordenhar</button>
+        <button onclick="buyUpgrade()">🛒 Comprar Ração Premium (50🥛)</button>
+        <button onclick="resetGame()">🔄 Resetar</button>
+        <button onclick="toggleMusic()">🎵 Música: <span id="musicStatus">On</span></button>
+        <button onclick="shareGame()">📤 Compartilhar Jogo</button>
+      </div>
+
+      <p id="eventMessage"></p>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="screen" id="gameOverScreen">
+    <div class="container">
+      <h1>💀 Sua vaquinha ficou doente!</h1>
+      <p>Leite acumulado: <span id="finalMilk">0</span></p>
+      <button onclick="resetGame()">🔄 Jogar Novamente</button>
+    </div>
+  </div>
+
+  <audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/08/11/audio_f8c380712f.mp3" loop></audio>
+
+  <script>
+    let hunger = 100;
+    let comfort = 100;
+    let health = 100;
+    let milk = parseInt(localStorage.getItem('milk')) || 0;
+    let hasUpgrade = false;
+    let raining = false;
+    let musicOn = true;
+
+    const hungerEl = document.getElementById('hunger');
+    const comfortEl = document.getElementById('comfort');
+    const healthEl = document.getElementById('health');
+    const milkEl = document.getElementById('milk');
+    const cowImage = document.getElementById('cowImage');
+    const musicStatus = document.getElementById('musicStatus');
+    const finalMilk = document.getElementById('finalMilk');
+    const eventMessage = document.getElementById('eventMessage');
+    const bgMusic = document.getElementById('bgMusic');
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function startGame() {
+      showScreen('gameScreen');
+      updateUI();
+      if (musicOn) bgMusic.play();
+    }
+
+    function updateUI() {
+      hungerEl.textContent = hunger;
+      comfortEl.textContent = comfort;
+      healthEl.textContent = health;
+      milkEl.textContent = milk;
+
+      if (health <= 0) {
+        cowImage.src = "https://i.imgur.com/TzWbOZ5.png";
+        endGame();
+        return;
+      } else if (comfort < 40 || hunger < 40) {
+        cowImage.src = "https://i.imgur.com/vTPzPPh.png";
+      } else {
+        cowImage.src = "https://i.imgur.com/ZYuKo0P.png";
+      }
+
+      localStorage.setItem('milk', milk);
+    }
+
+    function feedCow() {
+      if (health <= 0) return;
+      hunger = Math.min(hunger + (hasUpgrade ? 40 : 20), 100);
+      updateUI();
+    }
+
+    function comfortCow() {
+      if (health <= 0) return;
+      comfort = Math.min(comfort + 20, 100);
+      updateUI();
+    }
+
+    function milkCow() {
+      if (health <= 0) return;
+      const milkGain = Math.floor((hunger + comfort + health) / 30);
+      milk += milkGain;
+      updateUI();
+    }
+
+    function buyUpgrade() {
+      if (milk >= 50 && !hasUpgrade) {
+        milk -= 50;
+        hasUpgrade = true;
+        alert("🐄 Sua vaquinha agora tem ração premium!");
+        updateUI();
+      } else if (hasUpgrade) {
+        alert("Você já comprou a ração premium!");
+      } else {
+        alert("Você precisa de 50🥛 para comprar.");
+      }
+    }
+
+    function resetGame() {
+      hunger = 100;
+      comfort = 100;
+      health = 100;
+      milk = 0;
+      hasUpgrade = false;
+      raining = false;
+      eventMessage.textContent = "";
+      localStorage.removeItem('milk');
+      showScreen('gameScreen');
+      updateUI();
+      if (musicOn) bgMusic.play();
+    }
+
+    function endGame() {
+      showScreen('gameOverScreen');
+      finalMilk.textContent = milk;
+      bgMusic.pause();
+    }
+
+    function toggleMusic() {
+      musicOn = !musicOn;
+      if (musicOn) {
+        bgMusic.play();
+        musicStatus.textContent = "On";
+      } else {
+        bgMusic.pause();
+        musicStatus.textContent = "Off";
+      }
+    }
+
+    function shareGame() {
+      const url = window.location.href;
+      if (navigator.share) {
+        navigator.share({
+          title: 'Jogue Vaquinha Feliz!',
+          text: 'Cuide da vaquinha e ordenhe leite 🐄🥛',
+          url: url
+        });
+      } else {
+        navigator.clipboard.writeText(url);
+        alert("🔗 Link copiado para a área de transferência!");
+      }
+    }
+
+    setInterval(() => {
+      if (health <= 0) return;
+
+      hunger = Math.max(hunger - 2, 0);
+      comfort = Math.max(comfort - (raining ? 3 : 1), 0);
+
+      if (hunger <= 20 || comfort <= 20) {
+        health = Math.max(health - 3, 0);
+      } else if (health < 100) {
+        health = Math.min(health + 1, 100);
+      }
+
+      updateUI();
+    }, 2000);
+
+    setInterval(() => {
+      if (Math.random() < 0.2) {
+        raining = true;
+        eventMessage.textContent = "🌧️ Está chovendo! O conforto cai mais rápido.";
+        setTimeout(() => {
+          raining = false;
+          eventMessage.textContent = "";
+        }, 6000);
+      }
+    }, 15000);
+
+    updateUI();
+  </script>
+</body>
+</html>
